@@ -2,16 +2,16 @@ package com.isanechek.razborpoletov.main
 
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
-import android.util.Log
-import com.isanechek.razborpoletov.R
+import android.util.Log.e
 import com.isanechek.razborpoletov.data.EpisodeModel
 import com.isanechek.razborpoletov.data.rss.RssItem
 import com.isanechek.razborpoletov.data.rss.RssParser
 import com.isanechek.razborpoletov.utils.ContentUtil
 import io.realm.Realm
 import io.realm.RealmResults
+import io.realm.Sort
 import org.jetbrains.anko.doAsync
-import org.jetbrains.anko.uiThread
+import org.jetbrains.anko.setContentView
 import kotlin.properties.Delegates
 
 /**
@@ -23,11 +23,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.test_layout)
         msg("Hello From Android App For Razbor Poletov")
-
-        realm = Realm.getDefaultInstance()
         getData()
+        realm = Realm.getDefaultInstance()
+        val fromDb: RealmResults<EpisodeModel> = realm.where(EpisodeModel::class.java).findAll()
+        val result: List<EpisodeModel> = fromDb.sort("title", Sort.ASCENDING)
+        MainActivityView(ListAdapter(result)).setContentView(this)
     }
 
     override fun onResume() {
@@ -42,33 +43,21 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        msg("Good Bay")
         realm.close()
+        msg("Good Bay")
     }
 
     private fun getData() {
-        msg("getData")
         doAsync {
-            msg("other thread")
             val items: ArrayList<RssItem> = RssParser.getRssItems("http://feeds.feedburner.com/razbor-podcast")
-            msg("items -> " + items.size)
             val result: ArrayList<EpisodeModel> = ContentUtil.getMappingList(items)
-            msg("result " + result.size)
-            uiThread {
-                msg("main thread")
-                realm.executeTransaction {
-                    realm.insertOrUpdate(result)
-                }
-                val fromBd: RealmResults<EpisodeModel> = realm.where(EpisodeModel::class.java).findAll()
-                msg("from db " + fromBd.size)
-                for (i in fromBd) {
-                    msg("Episode ${i.title}")
-                }
-            }
+            realm = Realm.getDefaultInstance()
+            realm.executeTransaction { realm.insertOrUpdate(result) }
+            realm.close()
         }
     }
 
     private fun msg(msg: String) {
-        Log.e("MainActivity", msg)
+        e("MainActivity", msg)
     }
 }
