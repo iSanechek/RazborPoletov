@@ -66,7 +66,6 @@ object RssParser {
                         //create RssItemObject and add it to the ArrayList
                         val rssItemParser = RssItem(_title, _description,
                                 _pubDate, _link)
-
                         cache.add(rssItemParser)
                     }
                 }
